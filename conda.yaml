@@ -1,0 +1,14 @@
+name: gbp_variantcalling
+channels:
+    - bioconda
+    - conda-forge
+dependencies:
+    - gatk4=4.2.4.0
+    - bwa=0.7.8
+    - samtools=1.14
+    - picard=2.26.9
+    - vcftools=0.1.16
+    - bcftools=1.14
+    - fastqc=0.11.9
+    - libgcc-ng=11.2.0
+    - openjdk=8.0.312

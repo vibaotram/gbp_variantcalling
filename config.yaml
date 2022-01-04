@@ -1,0 +1,53 @@
+fastq_dir: "test/fastq_dir"
+output_dir: "test/output"
+ref: "test/ref/CC1.8_v2_pseudomolecule_cat.fa"
+
+## quality control before processing
+fastqc:
+    params: ""
+    threads: 2
+
+## pre-processing if neccessary
+# fastp
+
+## variant calling from fastq
+bwa_mem:
+    params: "-R '@RG\tID:RC3\tSM:RC3\tPL:Illumina'"
+    threads: 2
+
+sam_to_bam:
+    picard_SortSam_params: "-SORT_ORDER coordinate -VALIDATION_STRINGENCY SILENT -CREATE_INDEX true" # index reference
+    samtools_view_params: "-h -b -f=0x02" # convert sam to bam and filter mapping
+    samtools_index_params: "" # index bam
+    threads: 2
+
+MarkDuplicates:
+    params: "--remove-sequencing-duplicates false --read-validation-stringency SILENT"
+    threads: 2
+
+HaplotypeCaller:
+    params: "-RF CigarContainsNoNOperator"
+
+GenomicDBImport:
+    params: ""
+    threads: 2
+
+CombineGVCFs:
+    params: ""
+
+
+## stats before and/or after variant filtration
+bcftools:
+    before: ["gatk_VariantFiltration", "gatk_SelectVariants"]
+
+
+## variant filtration
+gatk_VariantFiltration:
+    params: "--cluster-size 4 --cluster-window-size 10 --filter-expression 'QUAL<200' --filter-name 'LOW-QUAL' --filter-expression 'MQ0>=4 && ((MQ0/(1.0 * DP)) > 0.1 )'"
+    suffix: "_VariantFiltration"
+gatk_SelectVariants:
+    params: "--restrict-alleles-to BIALLELIC --select-type-to-include SNP"
+    suffix: "_SelectVariants"
+vcftools:
+    params: "--min-meanDP 10 --max-meanDP 100 --max-missing 0.85" # singleton, doubleton
+    suffix: "_vcftools"
