@@ -15,18 +15,19 @@ bwa_mem:
     params: "-R '@RG\tID:RC3\tSM:RC3\tPL:Illumina'"
     threads: 2
 
-sam_to_bam:
-    picard_SortSam_params: "-SORT_ORDER coordinate -VALIDATION_STRINGENCY SILENT -CREATE_INDEX true" # index reference
-    samtools_view_params: "-h -b -f=0x02" # convert sam to bam and filter mapping
-    samtools_index_params: "" # index bam
-    threads: 2
+
+picard_SortSam:
+    params: "-SORT_ORDER coordinate -VALIDATION_STRINGENCY SILENT" # index reference
+samtools_view:
+    params: "-h -b -f 0x02" # convert sam to bam and filter mapping
 
 MarkDuplicates:
     params: "--remove-sequencing-duplicates false --read-validation-stringency SILENT"
     threads: 2
 
 HaplotypeCaller:
-    params: "-RF CigarContainsNoNOperator"
+    params: "--read-filter GoodCigarReadFilter --annotate-with-num-discovered-alleles true --max-alternate-alleles 10"
+    threads: 2
 
 GenomicDBImport:
     params: ""

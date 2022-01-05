@@ -95,7 +95,7 @@ rule index_ref:
 rule bwa_mem:
     input:
         fastq = os.path.join(fastq_dir, "{sample}"),
-        ref_index = rules.index_ref.output
+        # ref_index = rules.index_ref.output
     output: temp(os.path.join(output_dir, "bwa_mem/{sample}.sam"))
     params: config["bwa_mem"]["params"]
     threads: config["bwa_mem"]["threads"]
@@ -106,30 +106,37 @@ rule bwa_mem:
         fastq=$(find {input.fastq} -regex ".*\(1\|2\).\(fq.gz\|fastq.gz\|fq\|fastq\)" | xargs -n1 | sort | xargs)
         echo "bwa mem -t {threads} {params} {ref} $fastq > {output}"
         bwa mem {ref} $fastq -t {threads} {params} -R $(./read_group.sh $fastq)> {output}
-        rm -rf {ref}.*
         """
 
-rule sam_to_bam:
+rule picard_SortSam:
     input: rules.bwa_mem.output
     output:
         bam = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}.bam")),
         idx = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}.bam.bai")),
-    params:
-        picard_SortSam_params = config["sam_to_bam"]["picard_SortSam_params"],
-        samtools_view_params = config["sam_to_bam"]["samtools_view_params"],
-        samtools_index_params = config["sam_to_bam"]["samtools_index_params"],
-    threads: config["sam_to_bam"]["threads"]
+    params: config["picard_SortSam"]["params"]
+    conda: "conda.yaml"
+    shell:
+        """
+        picard SortSam -I {input} -O {output.bam} -CREATE_INDEX true {params}
+        """
+
+rule samtools_view:
+    input: rules.picard_SortSam.output.bam
+    output:
+        bam = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}_samtoolsView.bam")),
+        idx = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}_samtoolsView.bam.bai")),
+    params: config["samtools_view"]["params"]
+    threads: config["samtools_view"]["threads"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
         """
-        picard SortSam -I {input} -O {output.bam} {params.picard_SortSam_params}
-        samtools view {params.samtools_view_params} -@ {threads} -o {output.bam} {input}
-        samtools index {params.samtools_index_params} {output.bam}
+        samtools view {params} -@ {threads} -o {output.bam} {input}
+        samtools index {output.bam}
         """
 
 rule MarkDuplicates:
-    input: rules.sam_to_bam.output.bam
+    input: rules.samtools_view.output.bam
     output:
         bam = os.path.join(output_dir, "sorted_bam/{sample}/{sample}_MarkDuplicate.bam"),
     params: config["MarkDuplicates"]["params"]
@@ -149,8 +156,9 @@ rule MarkDuplicates:
 
 rule HaplotypeCaller:
     input: rules.MarkDuplicates.output
-    output: temp(os.path.join(output_dir, "HaplotypeCaller/{sample}.gvcf")),
+    output: temp(os.path.join(output_dir, "HaplotypeCaller/{sample}.g.vcf")),
     params: config["HaplotypeCaller"]["params"]
+    threads: config["HaplotypeCaller"]["threads"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -159,14 +167,14 @@ rule HaplotypeCaller:
         then
             samtools faidx {ref} --fai-idx {ref}.fai
         fi
-        gatk HaplotypeCaller -R {ref} -I {input} -O {output} -ERC GVCF {params}
+        gatk HaplotypeCaller -R {ref} -I {input} -O {output} --native-pair-hmm-threads {threads} -ERC GVCF {params}
         """
 
 GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = set(sample)))
 
 rule GenomicDBImport:
     input: expand(rules.HaplotypeCaller.output, sample = set(sample))
-    output: temp(os.path.join(output_dir, "gendb/{chrom}"))
+    output: temp(directory(os.path.join(output_dir, "gendb/{chrom}")))
     params: config["GenomicDBImport"]["params"]
     threads: config["GenomicDBImport"]["threads"]
     conda: "conda.yaml"
@@ -184,7 +192,11 @@ rule CombineGVCFs:
     # singularity: singularity_img
     shell:
         """
-        gatk CombineGVCFs -R {ref} -V {input} -O $out_vcf {params}
+        ref=$(realpath {ref})
+        output=$(realpath {output})
+        input=$(basename {input})
+        cd $(dirname {input})
+        gatk CombineGVCFs -R $ref -V gendb://$input -O $output {params}
         """
 
 
@@ -206,29 +218,32 @@ rule filter_variants:
     conda: "conda.yaml"
     shell:
         """
-        in_name=$(basename {input} | sed 's/.vcf')
+        in_name=$(basename {input} | sed 's/.vcf//')
         dir=$(dirname {output})
-        input={input}
-        if [[ ! -z {params.gatk_VF_opt} ]]
+        input="{input}"
+        gatk_VF_opt="{params.gatk_VF_opt}"
+        if [[ ! -z $gatk_VF_opt ]]
         then
             echo -e "### filtering by gatk VariantFiltration: {params.gatk_VF_opt}"
-            gatk VariantFiltration -R {ref} -V $input -O $dir/$in_name{params.gatk_VF_opt} {params.gatk_VF_opt}
-            input=$dir/$in_name{params.gatk_VF_opt}
-            in_name=$in_name{params.gatk_VF_opt}
+            gatk VariantFiltration -R {ref} -V $input -O $dir/$in_name"{params.gatk_VF_suf}.vcf" {params.gatk_VF_opt}
+            input=$dir/$in_name"{params.gatk_VF_suf}.vcf"
+            in_name=$in_name"{params.gatk_VF_suf}"
         fi
-        if [[ ! -z {params.gatk_SV_opt} ]]
+        gatk_SV_opt="{params.gatk_SV_opt}"
+        if [[ ! -z $gatk_SV_opt ]]
         then
             echo -e "### filtering by gatk SelectVariants: {params.gatk_SV_opt}"
-            gatk SelectVariants -R {ref} -V $input -O $dir/$in_name{params.gatk_SV_suf} {params.gatk_SV_opt}
-            input=$dir/$in_name{params.gatk_SV_suf}
-            in_name=$in_name{params.gatk_SV_suf}
+            gatk SelectVariants -R {ref} -V $input -O $dir/$in_name"{params.gatk_SV_suf}.vcf" {params.gatk_SV_opt}
+            input=$dir/$in_name"{params.gatk_SV_suf}.vcf"
+            in_name=$in_name"{params.gatk_SV_suf}"
         fi
-        if [[ ! -z {params.vcftools_opt} ]]
+        vcftools_opt="{params.vcftools_opt}"
+        if [[ ! -z $vcftools_opt ]]
         then
             echo -e "### filtering by vcftools: {params.vcftools_opt}"
             cd $dir
-            vcftools --vcf $in_name --out $in_name{params.vcftools_suf} {params.vcftools_opt}
-            mv $in_name{params.vcftools_suf}.recode.vcf $in_name{params.vcftools_suf}.vcf
+            vcftools --vcf $in_name".vcf" --out $in_name"{params.vcftools_suf}" --recode {params.vcftools_opt}
+            mv $in_name"{params.vcftools_suf}".recode.vcf $in_name"{params.vcftools_suf}".vcf
         fi
         """
 
@@ -239,7 +254,7 @@ rule concate_vcf:
         vcf_tbi = os.path.join(output_dir, "{final_dir}/all_final{filtered}.vcf.gz.tbi"),
     shell:
         """
-        $out_vcf=$(echo {output.vcf_gz} | sed 's/\.gz//')
+        out_vcf=$(echo {output.vcf_gz} | sed 's/\.gz//')
         bcftools concat -o $out_vcf {input}
         bgzip $out_vcf
         tabix -p vcf {output.vcf_gz}
