@@ -12,6 +12,6 @@ else
 fi
 
 id=$(echo $header | cut -f1 -d"L" | sed 's/@//')
-sm=$(basename $(dirname $fastq))
+sm=$(basename $(dirname $1))
 l=$(echo $header | cut -f2 -d"L" | cut -f1 -d"C")
-echo "@RG\tID:$id.$l\tSM:R$sm\tPL:Illumina"
+echo "@RG\tID:$id.$l\tSM:$sm\tPL:Illumina"
