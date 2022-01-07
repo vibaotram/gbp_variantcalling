@@ -74,8 +74,8 @@ rule fastqc_ind:
 
 rule gbp_variantcalling:
     input:
-        vcf_gz = expand(os.path.join(output_dir, "{final_dir}/all_final{filtered}.vcf.gz"), final_dir = final_dir, filtered = filtered),
-        vcf_tbi = expand(os.path.join(output_dir, "{final_dir}/all_final{filtered}.vcf.gz.tbi"), final_dir = final_dir, filtered = filtered),
+        vcf_gz = expand(os.path.join(output_dir, "{final_dir}/all_final{filtered}_singletons.vcf.gz"), final_dir = final_dir, filtered = filtered),
+        vcf_tbi = expand(os.path.join(output_dir, "{final_dir}/all_final{filtered}_singletons.vcf.gz.tbi"), final_dir = final_dir, filtered = filtered),
         # expand(os.path.join(output_dir, "{final_dir}/{chrom}{filtered}.vcf"), final_dir = final_dir, chrom = chrom, filtered = filtered)
 
 ## pre-processing if neccessary
@@ -225,7 +225,7 @@ x = [gatk_VF_suf, gatk_SV_suf, vcftools_suf]
 
 rule filter_variants:
     input: rules.CombineGVCFs.output
-    output: os.path.join(output_dir, "filtered_vcf_by_chrom/{chrom}{filtered}.vcf".format(chrom = "{chrom}", filtered = filtered))
+    output: os.path.join(output_dir, "filtered_vcf_by_chrom/{chrom}{filtered}_singletons.vcf".format(chrom = "{chrom}", filtered = filtered))
     log: os.path.join(output_dir, "logs/snakemake/filtered_vcf_by_chrom/{chrom}.log")
     params:
         gatk_VF_opt = gatk_VF_opt,
@@ -245,8 +245,8 @@ rule filter_variants:
         if [[ ! -f $stats_file ]]
         then
             cp {params.variant_count} $dir/
-            echo -e "Filter,None,{gatk_VF_opt},{gatk_SV_opt},{vcftools_opt}" >> $stats_file
-            echo -e "Filename,None,{gatk_VF_suf},{gatk_SV_suf},{vcftools_suf}" >> $stats_file
+            echo -e "Filter,None,{gatk_VF_opt},{gatk_SV_opt},{vcftools_opt},singletons_doubletons" >> $stats_file
+            echo -e "Filename,None,{gatk_VF_suf},{gatk_SV_suf},{vcftools_suf},{vcftools_suf}_singletons" >> $stats_file
         fi
         raw_count=$(echo $(gatk CountVariants -V {input}) | sed 's/Tool returned://g')
         in_name=$(basename {input} | sed 's/.vcf//')
@@ -281,15 +281,29 @@ rule filter_variants:
             vcftools --vcf $in_name".vcf" --out $in_name"{params.vcftools_suf}" --recode {params.vcftools_opt}
             mv $in_name"{params.vcftools_suf}".recode.vcf $in_name"{params.vcftools_suf}.vcf"
             vt_count=$(echo $(gatk CountVariants -V $in_name"{params.vcftools_suf}.vcf") | sed 's/Tool returned://g')
+            cd $init_dir
         else
             vt_count=$sv_count
         fi
+        cd $dir
+        vcftools --singletons --vcf $in_name"{params.vcftools_suf}.vcf" --out "filter"
+        if [[ $(cat filter.singletons | wc -l ) != 1 ]]
+        then
+            echo "### filtering by vcftools: singletons and doubletons"
+            echo "singletons"
+            vcftools --vcf $in_name"{params.vcftools_suf}.vcf" --out $in_name"{params.vcftools_suf}_singletons.vcf" --positions filter.singletons
+            echo "filter singletons"
+            sgl_count=$(echo $(gatk CountVariants -V $in_name"{params.vcftools_suf}_singletons.vcf") | sed 's/Tool returned://g')
+        else
+            cp $in_name"{params.vcftools_suf}.vcf" $in_name"{params.vcftools_suf}_singletons.vcf"
+            sgl_count=$vt_count
+        fi
         cd $init_dir
-        echo -e "{wildcards.chrom},$raw_count,$vf_count,$sv_count,$vt_count" >> $stats_file
+        echo -e "{wildcards.chrom},$raw_count,$vf_count,$sv_count,$vt_count,$sgl_count" >> $stats_file
         """
 
 rule concate_vcf:
-    input: expand(os.path.join(output_dir, "{final_dir}/{chrom}{filtered}.vcf"), final_dir = final_dir, chrom = chrom, filtered = filtered)
+    input: expand(os.path.join(output_dir, "{final_dir}/{chrom}{filtered}_singletons.vcf"), final_dir = final_dir, chrom = chrom, filtered = filtered)
     output:
         vcf_gz = os.path.join(output_dir, "{final_dir}/all_final{filtered}.vcf.gz"),
         vcf_tbi = os.path.join(output_dir, "{final_dir}/all_final{filtered}.vcf.gz.tbi"),
@@ -308,7 +322,7 @@ rule concate_vcf:
         if [[ -f $stats_file ]]
         then
             append="Total"
-            for i in 2 3 4 5
+            for i in 2 3 4 5 6
             do
                 t=$(tail -n +4 $stats_file | cut -d',' -f$i | awk '{{Total=Total+$1}} END{{print Total}}')
                 append=$append","$t
