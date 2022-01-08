@@ -48,8 +48,8 @@ gatk_VariantFiltration:
     params: "--cluster-size 4 --cluster-window-size 10 --filter-name 'LOW-QUAL' --filter-expression 'QUAL<200' --filter-name 'LOW-MQ' --filter-expression 'MQ0>=4 && ((MQ0/(1.0 * DP)) > 0.1 )' "
     suffix: "_VariantFiltration"
 gatk_SelectVariants:
-    params: ""
+    params: "--restrict-alleles-to BIALLELIC --select-type-to-include SNP"
     suffix: "_SelectVariants"
 vcftools:
-    params: "" # singleton, doubleton
+    params: "--min-meanDP 10 --max-meanDP 100 --max-missing 0.85" # singleton, doubleton
     suffix: "_vcftools"
