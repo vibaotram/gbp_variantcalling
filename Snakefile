@@ -201,7 +201,8 @@ rule GenomicDBImport:
         """
 
 rule CombineGVCFs:
-    input: rules.GenomicDBImport.output
+    input: expand(rules.HaplotypeCaller.output, sample=sample)
+        #rules.GenomicDBImport.output
     output: os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf")
     log: os.path.join(output_dir, "logs/snakemake/vcf_by_chrom/{chrom}.log")
     params: config["CombineGVCFs"]["params"]
@@ -214,7 +215,8 @@ rule CombineGVCFs:
         output=$(realpath {output})
         input=$(basename {input})
         cd $(dirname {input})
-        gatk CombineGVCFs -R $ref -V gendb://$input -O $output {params}
+        for i in {input}; do input=$input' -V '$i; done
+        gatk CombineGVCFs -R $ref $input -O $output {params} --intervals {wildcards.chrom}
         """
 
 
