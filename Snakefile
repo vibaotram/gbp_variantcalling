@@ -297,8 +297,8 @@ rule filter_variants:
             vt_count=$sv_count
         fi
         cd $dir
-        vcftools --singletons --vcf $in_name"{params.vcftools_suf}.vcf" --out "filter"
-        if [[ $(cat filter.singletons | wc -l ) != 1 ]]
+        vcftools --singletons --vcf $in_name"{params.vcftools_suf}.vcf" --out {wildcards.chrom}.singletons
+        if [[ $(cat {wildcards.chrom}.singletons | wc -l ) != 1 ]]
         then
             echo "### filtering by vcftools: singletons and doubletons"
             vcftools --vcf $in_name"{params.vcftools_suf}.vcf" --out $in_name"{params.vcftools_suf}_singletons" --positions {wildcards.chrom}.singletons --recode
