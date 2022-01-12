@@ -6,7 +6,8 @@ configfile: "config.yaml"
 
 ## input
 fastq_dir = config["fastq_dir"]
-sample,fq, = glob_wildcards(os.path.join(fastq_dir, "{sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
+samples,fq, = glob_wildcards(os.path.join(fastq_dir, "{sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
+sample = set(samples)
 fastq_files, = glob_wildcards(os.path.join(fastq_dir, "{fastq_files, .*/.*.(fq|fq.gz|fastq|fastq.gz)}"))
 
 ref = config["ref"]
@@ -200,21 +201,32 @@ rule GenomicDBImport:
         gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
         """
 
-rule GenotypeGVCFs :
-    input: rules.GenomicDBImport.output
-    output: os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf")
-    log: os.path.join(output_dir, "logs/snakemake/vcf_by_chrom/{chrom}.log")
+rule CombineGVCFs:
+    input: expand(rules.HaplotypeCaller.output, sample = sample)
+    output: os.path.join(output_dir, "vcf_by_chrom/combined.g.vcf")
+    log: os.path.join(output_dir, "logs/snakemake/vcf_by_chrom/CombineGVCFs.log")
     params: config["CombineGVCFs"]["params"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
         """
         exec > >(tee {log}) 2>&1
-        ref=$(realpath {ref})
-        output=$(realpath {output})
-        input=$(basename {input})
-        cd $(dirname {input})
-        gatk  GenotypeGVCFs  -R $ref -V gendb://$input -O $output {params} --intervals {wildcards.chrom}
+        input=""
+        for i in {input}; do input=$input' -V'$i; done
+        gatk CombineGVCFs -R {ref} $input -O {output} {params}
+        """
+
+rule GenotypeGVCFs :
+    input: rules.CombineGVCFs.output
+    output: os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf")
+    log: os.path.join(output_dir, "logs/snakemake/vcf_by_chrom/GenotypeGVCFs_{chrom}.log")
+    params: config["GenomicDBImport"]["params"]
+    conda: "conda.yaml"
+    # singularity: singularity_img
+    shell:
+        """
+        exec > >(tee {log}) 2>&1
+        gatk  GenotypeGVCFs  -R {ref} -V {input} -O {output} {params} --intervals {wildcards.chrom}
         """
 
 
