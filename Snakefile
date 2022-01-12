@@ -6,11 +6,7 @@ configfile: "config.yaml"
 
 ## input
 fastq_dir = config["fastq_dir"]
-samples,fq, = glob_wildcards(os.path.join(fastq_dir, "{sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
-sample = []
-for s in samples:
-    if s not in sample:
-        sample.append(s)
+sample,fq, = glob_wildcards(os.path.join(fastq_dir, "{sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
 fastq_files, = glob_wildcards(os.path.join(fastq_dir, "{fastq_files, .*/.*.(fq|fq.gz|fastq|fastq.gz)}"))
 
 ref = config["ref"]
@@ -204,9 +200,8 @@ rule GenomicDBImport:
         gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
         """
 
-rule CombineGVCFs:
-    input: expand(rules.HaplotypeCaller.output, sample=sample)
-        #rules.GenomicDBImport.output
+rule GenotypeGVCFs :
+    input: rules.GenomicDBImport.output
     output: os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf")
     log: os.path.join(output_dir, "logs/snakemake/vcf_by_chrom/{chrom}.log")
     params: config["CombineGVCFs"]["params"]
@@ -216,19 +211,16 @@ rule CombineGVCFs:
         """
         exec > >(tee {log}) 2>&1
         ref=$(realpath {ref})
-        #output=$(realpath {output})
-        #input=$(basename {input})
-        #cd $(dirname {input})
-        input=""
-        for i in {input}; do input=$input' -V '$i; done
-        gatk CombineGVCFs -R {ref} $input -O {output} {params} --intervals {wildcards.chrom}
+        output=$(realpath {output})
+        input=$(basename {input})
+        cd $(dirname {input})
+        gatk  GenotypeGVCFs  -R $ref -V gendb://$input -O $output {params} --intervals {wildcards.chrom}
         """
 
 
 
 ## variant filtration
 
-x = [gatk_VF_suf, gatk_SV_suf, vcftools_suf]
 
 rule filter_variants:
     input: rules.CombineGVCFs.output
