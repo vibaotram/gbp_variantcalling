@@ -6,7 +6,11 @@ configfile: "config.yaml"
 
 ## input
 fastq_dir = config["fastq_dir"]
-sample,fq, = glob_wildcards(os.path.join(fastq_dir, "{sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
+samples,fq, = glob_wildcards(os.path.join(fastq_dir, "{sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
+sample = []
+for s in samples:
+    if s not in sample:
+        sample.append(s)
 fastq_files, = glob_wildcards(os.path.join(fastq_dir, "{fastq_files, .*/.*.(fq|fq.gz|fastq|fastq.gz)}"))
 
 ref = config["ref"]
