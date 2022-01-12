@@ -212,7 +212,7 @@ rule CombineGVCFs:
         """
         exec > >(tee {log}) 2>&1
         input=""
-        for i in {input}; do input=$input' -V'$i; done
+        for i in {input}; do input=$input' -V '$i; done
         gatk CombineGVCFs -R {ref} $input -O {output} {params}
         """
 
