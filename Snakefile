@@ -212,11 +212,11 @@ rule CombineGVCFs:
         """
         exec > >(tee {log}) 2>&1
         ref=$(realpath {ref})
-        output=$(realpath {output})
-        input=$(basename {input})
-        cd $(dirname {input})
+        #output=$(realpath {output})
+        #input=$(basename {input})
+        #cd $(dirname {input})
         for i in {input}; do input=$input' -V '$i; done
-        gatk CombineGVCFs -R $ref $input -O $output {params} --intervals {wildcards.chrom}
+        gatk CombineGVCFs -R {ref} $input -O {output} {params} --intervals {wildcards.chrom}
         """
 
 
