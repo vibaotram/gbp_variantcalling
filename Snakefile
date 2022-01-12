@@ -215,6 +215,7 @@ rule CombineGVCFs:
         #output=$(realpath {output})
         #input=$(basename {input})
         #cd $(dirname {input})
+        input=""
         for i in {input}; do input=$input' -V '$i; done
         gatk CombineGVCFs -R {ref} $input -O {output} {params} --intervals {wildcards.chrom}
         """
