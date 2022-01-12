@@ -297,11 +297,11 @@ rule filter_variants:
             vt_count=$sv_count
         fi
         cd $dir
-        vcftools --singletons --vcf $in_name"{params.vcftools_suf}.vcf" --out {wildcards.chrom}.singletons
+        vcftools --singletons --vcf $in_name"{params.vcftools_suf}.vcf" --out {wildcards.chrom}_singletons
         if [[ $(cat {wildcards.chrom}.singletons | wc -l ) != 1 ]]
         then
             echo "### filtering by vcftools: singletons and doubletons"
-            vcftools --vcf $in_name"{params.vcftools_suf}.vcf" --out $in_name"{params.vcftools_suf}_singletons" --positions {wildcards.chrom}.singletons --recode
+            vcftools --vcf $in_name"{params.vcftools_suf}.vcf" --out $in_name"{params.vcftools_suf}_singletons" --positions {wildcards.chrom}_singletons --recode
             mv $in_name"{params.vcftools_suf}_singletons.recode.vcf" $in_name"{params.vcftools_suf}_singletons.vcf"
             sgl_count=$(echo $(gatk CountVariants -V $in_name"{params.vcftools_suf}_singletons.vcf") | sed 's/Tool returned://g')
         else
