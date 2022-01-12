@@ -223,7 +223,7 @@ rule GenotypeGVCFs :
 
 
 rule filter_variants:
-    input: rules.CombineGVCFs.output
+    input: rules.GenotypeGVCFs.output
     output: os.path.join(output_dir, "filtered_vcf_by_chrom/{chrom}{filtered}_singletons.vcf".format(chrom = "{chrom}", filtered = filtered))
     log: os.path.join(output_dir, "logs/snakemake/filtered_vcf_by_chrom/{chrom}.log")
     params:
