@@ -99,7 +99,7 @@ rule index_ref:
 
 def input_bwa_mem(wildcards):
     # d,fq, = glob_wildcards(os.path.join(fastq_dir, "{d}/{wildcards.sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
-    fq = glob.glob(os.path.join(fastq_dir, "*{sample}/.*.(fq|fq.gz|fastq|fastq.gz)}"))
+    fq = glob.glob(os.path.join(fastq_dir, "*{sample}/*.fq*".format(sample = wildcards.sample)))
     return fq
 
 
