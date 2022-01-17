@@ -1,6 +1,7 @@
 import os
 from Bio import SeqIO
 import re
+import glob
 
 configfile: "config.yaml"
 
@@ -96,10 +97,16 @@ rule index_ref:
         bwa index {ref}
         """
 
+def input_bwa_mem(wildcards):
+    # d,fq, = glob_wildcards(os.path.join(fastq_dir, "{d}/{wildcards.sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
+    fq = glob.glob(os.path.join(fastq_dir, "*{sample}/.*.(fq|fq.gz|fastq|fastq.gz)}"))
+    return fq
+
 
 rule bwa_mem:
     input:
-        fastq = os.path.join(fastq_dir, "{fastq_files}"),
+        fastq = input_bwa_mem,
+        # fastq = os.path.join(fastq_dir, "{sample}"),
         ref_index = rules.index_ref.output
     output: temp(os.path.join(output_dir, "bwa_mem/{sample}.sam"))
     log: os.path.join(output_dir, "logs/snakemake/bwa_mem/{sample}.log")
