@@ -117,9 +117,9 @@ rule bwa_mem:
     shell:
         """
         exec > >(tee {log}) 2>&1
-        fastq=$(find {input.fastq} -regex ".*\(1\|2\).\(fq.gz\|fastq.gz\|fq\|fastq\)" | xargs -n1 | sort | xargs)
-        echo "bwa mem -t {threads} {params} {ref} $fastq > {output}"
-        bwa mem {ref} $fastq -t {threads} {params} -R $(./read_group.sh $fastq)> {output}
+        # fastq=$(find {input.fastq} -regex ".*\(1\|2\).\(fq.gz\|fastq.gz\|fq\|fastq\)" | xargs -n1 | sort | xargs)
+        echo "bwa mem -t {threads} {params} {ref} {input.fastq} > {output}"
+        bwa mem {ref} {input.fastq} -t {threads} {params} -R $(./read_group.sh {input.fastq}) > {output}
         """
 
 rule picard_SortSam:
