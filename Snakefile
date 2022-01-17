@@ -7,7 +7,10 @@ configfile: "config.yaml"
 ## input
 fastq_dir = config["fastq_dir"]
 samples,fq, = glob_wildcards(os.path.join(fastq_dir, "{sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
-sample = set(samples)
+uniq_samples = set(samples)
+sample=[]
+for i in uniq_samples:
+    sample.append(os.path.basename(i))
 fastq_files, = glob_wildcards(os.path.join(fastq_dir, "{fastq_files, .*/.*.(fq|fq.gz|fastq|fastq.gz)}"))
 
 ref = config["ref"]
@@ -96,7 +99,7 @@ rule index_ref:
 
 rule bwa_mem:
     input:
-        fastq = os.path.join(fastq_dir, "{sample}"),
+        fastq = os.path.join(fastq_dir, "{fastq_files}"),
         ref_index = rules.index_ref.output
     output: temp(os.path.join(output_dir, "bwa_mem/{sample}.sam"))
     log: os.path.join(output_dir, "logs/snakemake/bwa_mem/{sample}.log")
