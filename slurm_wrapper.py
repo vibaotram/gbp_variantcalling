@@ -26,12 +26,12 @@ cpus_per_task = '--cpus-per-task ' + str(threads)
 ntasks = '--ntasks 1'
 
 log = str(job_properties['log']) # os.path.join(output_dir, "logs/snakemake/bwa_mem/{sample}.log")
-logdir = os.path.dirname(os.path.dirname(os.path.dirname(log)))
-slurm_log = os.path.join(logdir, "slurm", os.path.basename(os.path.dirname(log)), os.path.basename(log))
-os.makedirs(os.path.dirname(slurm_log), exist_ok=True)
+# logdir = os.path.dirname(os.path.dirname(os.path.dirname(log)))
+# slurm_log = os.path.join(logdir, "slurm", os.path.basename(os.path.dirname(log)), os.path.basename(log))
+# os.makedirs(os.path.dirname(slurm_log), exist_ok=True)
 
-output = f'--output {slurm_log}_%j'
-error = f'--error {slurm_log}_%j'
+output = f'--output {log}_slurm_%j'
+error = f'--error {log}_slurm_%j'
 
 try:
     mem = job_properties['resources']['mem']
