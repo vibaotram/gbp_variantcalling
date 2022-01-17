@@ -25,7 +25,7 @@ cpus_per_task = '--cpus-per-task ' + str(threads)
 
 ntasks = '--ntasks 1'
 
-log = job_properties['log'] # os.path.join(output_dir, "logs/snakemake/bwa_mem/{sample}.log")
+log = str(job_properties['log']) # os.path.join(output_dir, "logs/snakemake/bwa_mem/{sample}.log")
 logdir = os.path.dirname(os.path.dirname(os.path.dirname(log)))
 slurm_log = os.path.join(logdir, "slurm", os.path.dirname(log), os.path.basename(log))
 os.makedirs(os.path.dirname(slurm_log), exist_ok=True)
@@ -36,10 +36,10 @@ error = f'--error {slurm_log}_%j'
 try:
     mem = job_properties['resources']['mem']
     mem = '--mem ' + str(mem)
-except IndexError:
+except (IndexError, KeyError):
     mem = ''
 
-cmdline = ' '.join(['sbatch --parsable ', job_name, partition, cpus_per_task, ntasks, output, error, jobscript])
+cmdline = ' '.join(['sbatch --parsable ', job_name, partition, cpus_per_task, ntasks, mem, output, error, jobscript])
 
 
 # jobscript.replace("\n", "\necho -e\"sbatch parameters:\n\"{}\"\"".format(sbatch), 1)
