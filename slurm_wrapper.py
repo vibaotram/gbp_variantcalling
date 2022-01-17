@@ -4,6 +4,7 @@
 wrap sbatch jobs based on Snakemake config file
 '''
 import os
+import sys
 from snakemake.utils import read_job_properties
 
 jobscript = sys.argv[-1]
