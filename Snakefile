@@ -115,7 +115,7 @@ rule bwa_mem:
     params: config["bwa_mem"]["params"]
     threads: config["bwa_mem"]["threads"]
     resources:
-        mem: config["bwa_mem"]["mem"]
+        mem = config["bwa_mem"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -133,7 +133,7 @@ rule picard_SortSam:
         bai = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}_SortSam.bai")),
     shadow: "full"
     log: os.path.join(output_dir, "logs/sorted_bam/picard_SortSam_{sample}.log")
-    params: config["picard_SortSam"]["params"]
+    params = config["picard_SortSam"]["params"]
     resources:
         mem: config["picard_SortSam"]["mem"]
     conda: "conda.yaml"
@@ -153,7 +153,7 @@ rule samtools_view:
     params: config["samtools_view"]["params"]
     threads: config["samtools_view"]["threads"]
     resources:
-        mem: config["samtools_view"]["mem"]
+        mem = config["samtools_view"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -174,7 +174,7 @@ rule MarkDuplicates:
     params: config["MarkDuplicates"]["params"]
     threads: config["MarkDuplicates"]["threads"]
     resources:
-        mem: config["MarkDuplicates"]["mem"]
+        mem = config["MarkDuplicates"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -202,7 +202,7 @@ rule HaplotypeCaller:
     params: config["HaplotypeCaller"]["params"]
     threads: config["HaplotypeCaller"]["threads"]
     resources:
-        mem: config["HaplotypeCaller"]["mem"]
+        mem = config["HaplotypeCaller"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -225,7 +225,7 @@ rule GenomicsDBImport:
     params: config["GenomicsDBImport"]["params"]
     threads: config["GenomicsDBImport"]["threads"]
     resources:
-        mem: config["GenomicsDBImport"]["mem"]
+        mem = config["GenomicsDBImport"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -242,6 +242,8 @@ rule CombineGVCFs:
     shadow: "full"
     log: os.path.join(output_dir, "logs/vcf_by_chrom/CombineGVCFs.log")
     params: config["CombineGVCFs"]["params"]
+    resources:
+        mem = config["CombineGVCFs"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -261,7 +263,7 @@ rule GenotypeGVCFs :
     log: os.path.join(output_dir, "logs/vcf_by_chrom/GenotypeGVCFs_{chrom}.log")
     params: config["GenotypeGVCFs"]["params"]
     resources:
-        mem: config["GenotypeGVCFs"]["mem"]
+        mem = config["GenotypeGVCFs"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -289,7 +291,7 @@ rule filter_variants:
         vcftools_suf = vcftools_suf,
         variant_count = "variant_count.csv",
     resources:
-        mem: config["filtration_mem"]
+        mem = config["filtration_mem"]
     conda: "conda.yaml"
     shell:
         """
