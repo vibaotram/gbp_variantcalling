@@ -91,6 +91,7 @@ rule gbp_variantcalling:
 rule index_ref:
     input: ref
     output: multiext(ref, ".bwt", ".pac", ".ann", ".amb", ".sa") # bwt. pac, ann, amb, sa
+    shadow: "full"
     conda: "conda.yaml"
     shell:
         """
@@ -99,7 +100,7 @@ rule index_ref:
 
 def input_bwa_mem(wildcards):
     # d,fq, = glob_wildcards(os.path.join(fastq_dir, "{d}/{wildcards.sample}/{fq, .*.(fq|fq.gz|fastq|fastq.gz)}"))
-    fq = glob.glob("{fastq_dir}/**/{sample}/*.fq*".format(fastq_dir = fastq_dir, sample = wildcards.sample), recursive=True)
+    fq = glob.glob("{fastq_dir}/**/{sample}/*.f*q".format(fastq_dir = fastq_dir, sample = wildcards.sample), recursive=True)
     return fq
 
 
@@ -109,9 +110,12 @@ rule bwa_mem:
         # fastq = os.path.join(fastq_dir, "{sample}"),
         ref_index = rules.index_ref.output
     output: temp(os.path.join(output_dir, "bwa_mem/{sample}.sam"))
-    log: os.path.join(output_dir, "logs/snakemake/bwa_mem/{sample}.log")
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/bwa_mem/{sample}.log")
     params: config["bwa_mem"]["params"]
     threads: config["bwa_mem"]["threads"]
+    resources:
+        mem: config["bwa_mem"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -125,10 +129,13 @@ rule bwa_mem:
 rule picard_SortSam:
     input: rules.bwa_mem.output
     output:
-        bam = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}.bam")),
-        idx = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}.bai")),
-    log: os.path.join(output_dir, "logs/snakemake/sorted_bam/picard_SortSam_{sample}.log")
+        bam = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}_SortSam.bam")),
+        bai = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}_SortSam.bai")),
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/sorted_bam/picard_SortSam_{sample}.log")
     params: config["picard_SortSam"]["params"]
+    resources:
+        mem: config["picard_SortSam"]["mem"]
     conda: "conda.yaml"
     shell:
         """
@@ -140,10 +147,13 @@ rule samtools_view:
     input: rules.picard_SortSam.output.bam
     output:
         bam = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}_samtoolsView.bam")),
-        idx = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}_samtoolsView.bam.bai")),
-    log: os.path.join(output_dir, "logs/snakemake/sorted_bam/samtoolsView_{sample}.log")
+        bai = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}_samtoolsView.bam.bai")),
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/sorted_bam/samtoolsView_{sample}.log")
     params: config["samtools_view"]["params"]
     threads: config["samtools_view"]["threads"]
+    resources:
+        mem: config["samtools_view"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -157,9 +167,14 @@ rule MarkDuplicates:
     input: rules.samtools_view.output.bam
     output:
         bam = os.path.join(output_dir, "sorted_bam/{sample}/{sample}_MarkDuplicate.bam"),
-    log: os.path.join(output_dir, "logs/snakemake/sorted_bam/MarkDuplicate_{sample}.log")
+        bai = os.path.join(output_dir, "sorted_bam/{sample}/{sample}_MarkDuplicate.bam.bai"),
+        sbi = os.path.join(output_dir, "sorted_bam/{sample}/{sample}_MarkDuplicate.bam.sbi"),
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/sorted_bam/MarkDuplicate_{sample}.log")
     params: config["MarkDuplicates"]["params"]
     threads: config["MarkDuplicates"]["threads"]
+    resources:
+        mem: config["MarkDuplicates"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -178,11 +193,16 @@ rule MarkDuplicates:
         """
 
 rule HaplotypeCaller:
-    input: rules.MarkDuplicates.output
-    output: temp(os.path.join(output_dir, "HaplotypeCaller/{sample}.g.vcf")),
-    log: os.path.join(output_dir, "logs/snakemake/HaplotypeCaller/{sample}.log")
+    input: rules.MarkDuplicates.output.bam
+    output:
+        gvcf = temp(os.path.join(output_dir, "HaplotypeCaller/{sample}.g.vcf")),
+        idx = temp(os.path.join(output_dir, "HaplotypeCaller/{sample}.g.vcf.idx")),
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/HaplotypeCaller/{sample}.log")
     params: config["HaplotypeCaller"]["params"]
     threads: config["HaplotypeCaller"]["threads"]
+    resources:
+        mem: config["HaplotypeCaller"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -197,12 +217,15 @@ rule HaplotypeCaller:
 
 GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = set(sample)))
 
-rule GenomicDBImport:
-    input: expand(rules.HaplotypeCaller.output, sample = set(sample))
+rule GenomicsDBImport:
+    input: expand(rules.HaplotypeCaller.output.gvcf, sample = set(sample))
     output: temp(directory(os.path.join(output_dir, "gendb/{chrom}")))
-    log: os.path.join(output_dir, "logs/snakemake/gendb/{chrom}.log")
-    params: config["GenomicDBImport"]["params"]
-    threads: config["GenomicDBImport"]["threads"]
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/gendb/{chrom}.log")
+    params: config["GenomicsDBImport"]["params"]
+    threads: config["GenomicsDBImport"]["threads"]
+    resources:
+        mem: config["GenomicsDBImport"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -212,9 +235,12 @@ rule GenomicDBImport:
         """
 
 rule CombineGVCFs:
-    input: expand(rules.HaplotypeCaller.output, sample = sample)
-    output: os.path.join(output_dir, "vcf_by_chrom/combined.g.vcf")
-    log: os.path.join(output_dir, "logs/snakemake/vcf_by_chrom/CombineGVCFs.log")
+    input: expand(rules.HaplotypeCaller.output.gvcf, sample = sample)
+    output:
+        gvcf = os.path.join(output_dir, "vcf_by_chrom/combined.g.vcf"),
+        idx = os.path.join(output_dir, "vcf_by_chrom/combined.g.vcf.idx"),
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/vcf_by_chrom/CombineGVCFs.log")
     params: config["CombineGVCFs"]["params"]
     conda: "conda.yaml"
     # singularity: singularity_img
@@ -227,10 +253,15 @@ rule CombineGVCFs:
         """
 
 rule GenotypeGVCFs :
-    input: rules.CombineGVCFs.output
-    output: os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf")
-    log: os.path.join(output_dir, "logs/snakemake/vcf_by_chrom/GenotypeGVCFs_{chrom}.log")
-    params: config["GenomicDBImport"]["params"]
+    input: rules.CombineGVCFs.output.gvcf
+    output:
+        gvcf = os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf"),
+        idx = os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf.idx"),
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/vcf_by_chrom/GenotypeGVCFs_{chrom}.log")
+    params: config["GenotypeGVCFs"]["params"]
+    resources:
+        mem: config["GenotypeGVCFs"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
@@ -245,9 +276,10 @@ rule GenotypeGVCFs :
 
 
 rule filter_variants:
-    input: rules.GenotypeGVCFs.output
+    input: rules.GenotypeGVCFs.output.gvcf
     output: os.path.join(output_dir, "filtered_vcf_by_chrom/{chrom}{filtered}_singletons.vcf".format(chrom = "{chrom}", filtered = filtered))
-    log: os.path.join(output_dir, "logs/snakemake/filtered_vcf_by_chrom/{chrom}.log")
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/filtered_vcf_by_chrom/{chrom}.log")
     params:
         gatk_VF_opt = gatk_VF_opt,
         gatk_SV_opt = gatk_SV_opt,
@@ -256,6 +288,8 @@ rule filter_variants:
         gatk_SV_suf = gatk_SV_suf,
         vcftools_suf = vcftools_suf,
         variant_count = "variant_count.csv",
+    resources:
+        mem: config["filtration_mem"]
     conda: "conda.yaml"
     shell:
         """
@@ -277,6 +311,10 @@ rule filter_variants:
         then
             echo -e "### filtering by gatk VariantFiltration: {params.gatk_VF_opt}"
             gatk VariantFiltration -R {ref} -V $input -O $dir/$in_name"{params.gatk_VF_suf}.vcf" {params.gatk_VF_opt}
+            cd $dir
+            vcftools --vcf $in_name"{params.gatk_VF_suf}.vcf" --out $in_name"{params.gatk_VF_suf}" --remove-filtered-all --recode --recode-INFO-all
+            mv $in_name"{params.gatk_VF_suf}.recode.vcf" $in_name"{params.gatk_VF_suf}.vcf"
+            cd $init_dir
             vf_count=$(echo $(gatk CountVariants -V $dir/$in_name"{params.gatk_VF_suf}.vcf") | sed 's/Tool returned://g')
             input=$dir/$in_name"{params.gatk_VF_suf}.vcf"
             in_name=$in_name"{params.gatk_VF_suf}"
@@ -299,8 +337,8 @@ rule filter_variants:
         then
             echo -e "### filtering by vcftools: {params.vcftools_opt}"
             cd $dir
-            vcftools --vcf $in_name".vcf" --out $in_name"{params.vcftools_suf}" --recode {params.vcftools_opt}
-            mv $in_name"{params.vcftools_suf}".recode.vcf $in_name"{params.vcftools_suf}.vcf"
+            vcftools --vcf $in_name".vcf" --out $in_name"{params.vcftools_suf}" --recode --recode-INFO-all {params.vcftools_opt}
+            mv $in_name"{params.vcftools_suf}.recode.vcf" $in_name"{params.vcftools_suf}.vcf"
             vt_count=$(echo $(gatk CountVariants -V $in_name"{params.vcftools_suf}.vcf") | sed 's/Tool returned://g')
             cd $init_dir
         else
@@ -311,7 +349,7 @@ rule filter_variants:
         if [[ $(cat "{wildcards.chrom}.singletons" | wc -l ) != 1 ]]
         then
             echo "### filtering by vcftools: singletons and doubletons"
-            vcftools --vcf $in_name"{params.vcftools_suf}.vcf" --out $in_name"{params.vcftools_suf}_singletons" --positions "{wildcards.chrom}.singletons" --recode
+            vcftools --vcf $in_name"{params.vcftools_suf}.vcf" --out $in_name"{params.vcftools_suf}_singletons" --positions "{wildcards.chrom}.singletons" --recode --recode-INFO-all
             mv $in_name"{params.vcftools_suf}_singletons.recode.vcf" $in_name"{params.vcftools_suf}_singletons.vcf"
             sgl_count=$(echo $(gatk CountVariants -V $in_name"{params.vcftools_suf}_singletons.vcf") | sed 's/Tool returned://g')
         else
@@ -327,7 +365,8 @@ rule concate_vcf:
     output:
         vcf_gz = os.path.join(output_dir, "{final_dir}/all_final{filtered}.vcf.gz"),
         vcf_tbi = os.path.join(output_dir, "{final_dir}/all_final{filtered}.vcf.gz.tbi"),
-    log: os.path.join(output_dir, "logs/snakemake/{final_dir}/concate_vcf_{filtered}.log")
+    shadow: "full"
+    log: os.path.join(output_dir, "logs/{final_dir}/concate_vcf{filtered}.log")
     conda: "conda.yaml"
     shell:
         """
@@ -353,9 +392,6 @@ rule concate_vcf:
 
 
 ## stats
-rule bcftools:
-    input: os.path.join(output_dir, "{final_dir}/{chrom}{filtered}.vcf")
-    output: os.path.join(output_dir, "stats/{final_dir}/{chrom}{filtered}.vcf")
 
 rule test:
     shell:

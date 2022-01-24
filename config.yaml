@@ -14,6 +14,7 @@ fastqc:
 bwa_mem:
     params: "-R '@RG\tID:RC3\tSM:RC3\tPL:Illumina'"
     threads: 2
+    mem: ""
 
 
 picard_SortSam:
@@ -21,27 +22,27 @@ picard_SortSam:
 samtools_view:
     params: "-h -b -f 0x02" # convert sam to bam and filter mapping
     threads: 48
+    mem: ""
 
 MarkDuplicates:
     params: "--remove-sequencing-duplicates false --read-validation-stringency SILENT"
     threads: 2
+    mem: ""
 
 HaplotypeCaller:
     params: "--read-filter GoodCigarReadFilter --annotate-with-num-discovered-alleles true --max-alternate-alleles 10"
     threads: 2
-
-GenomicDBImport:
-    params: ""
-    threads: 2
+    mem: "50G"
 
 CombineGVCFs:
     params: ""
+    mem: ""
 
+GenotypeGVCFs:
+    params: ""
+    mem: ""
 
 ## stats before and/or after variant filtration
-bcftools:
-    before: ["gatk_VariantFiltration", "gatk_SelectVariants"]
-
 
 ## variant filtration
 gatk_VariantFiltration:
@@ -53,3 +54,4 @@ gatk_SelectVariants:
 vcftools:
     params: "--min-meanDP 10 --max-meanDP 100 --max-missing 0.85" # singleton, doubleton
     suffix: "_vcftools"
+filtration_mem: ""

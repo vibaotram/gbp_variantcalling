@@ -35,7 +35,10 @@ error = f'--error {log}_slurm_%j'
 
 try:
     mem = job_properties['resources']['mem']
-    mem = '--mem ' + str(mem)
+    if mem:
+        mem = '--mem ' + str(mem)
+    else:
+        mem = mem
 except (IndexError, KeyError):
     mem = ''
 
