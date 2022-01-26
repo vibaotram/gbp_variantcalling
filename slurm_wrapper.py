@@ -28,7 +28,7 @@ ntasks = '--ntasks 1'
 log = str(job_properties['log'][0]) # os.path.join(output_dir, "logs/snakemake/bwa_mem/{sample}.log")
 # logdir = os.path.dirname(os.path.dirname(os.path.dirname(log)))
 # slurm_log = os.path.join(logdir, "slurm", os.path.basename(os.path.dirname(log)), os.path.basename(log))
-# os.makedirs(os.path.dirname(slurm_log), exist_ok=True)
+os.makedirs(os.path.dirname(log), exist_ok=True)
 
 output = f'--output {log}_slurm_%j'
 error = f'--error {log}_slurm_%j'
