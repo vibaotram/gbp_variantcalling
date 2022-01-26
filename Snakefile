@@ -215,24 +215,24 @@ rule HaplotypeCaller:
         gatk HaplotypeCaller -R {ref} -I {input} -O {output} --native-pair-hmm-threads {threads} -ERC GVCF {params}
         """
 
-GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = set(sample)))
-
-rule GenomicsDBImport:
-    input: expand(rules.HaplotypeCaller.output.gvcf, sample = set(sample))
-    output: temp(directory(os.path.join(output_dir, "gendb/{chrom}")))
-    shadow: "full"
-    log: os.path.join(output_dir, "logs/gendb/{chrom}.log")
-    params: config["GenomicsDBImport"]["params"]
-    threads: config["GenomicsDBImport"]["threads"]
-    resources:
-        mem = config["GenomicsDBImport"]["mem"]
-    conda: "conda.yaml"
-    # singularity: singularity_img
-    shell:
-        """
-        exec > >(tee {log}) 2>&1
-        gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
-        """
+# GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = set(sample)))
+#
+# rule GenomicsDBImport:
+#     input: expand(rules.HaplotypeCaller.output.gvcf, sample = set(sample))
+#     output: temp(directory(os.path.join(output_dir, "gendb/{chrom}")))
+#     shadow: "full"
+#     log: os.path.join(output_dir, "logs/gendb/{chrom}.log")
+#     params: config["GenomicsDBImport"]["params"]
+#     threads: config["GenomicsDBImport"]["threads"]
+#     resources:
+#         mem = config["GenomicsDBImport"]["mem"]
+#     conda: "conda.yaml"
+#     # singularity: singularity_img
+#     shell:
+#         """
+#         exec > >(tee {log}) 2>&1
+#         gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
+#         """
 
 rule CombineGVCFs:
     input: expand(rules.HaplotypeCaller.output.gvcf, sample = sample)
