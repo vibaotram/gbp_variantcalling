@@ -19,6 +19,8 @@ bwa_mem:
 
 picard_SortSam:
     params: "-SORT_ORDER coordinate -VALIDATION_STRINGENCY SILENT" # index reference
+    mem: ""
+    
 samtools_view:
     params: "-h -b -f 0x02" # convert sam to bam and filter mapping
     threads: 48

@@ -133,7 +133,7 @@ rule picard_SortSam:
         bai = temp(os.path.join(output_dir, "sorted_bam/{sample}/{sample}_SortSam.bai")),
     shadow: "full"
     log: os.path.join(output_dir, "logs/sorted_bam/picard_SortSam_{sample}.log")
-    params = config["picard_SortSam"]["params"]
+    params: config["picard_SortSam"]["params"]
     resources:
         mem: config["picard_SortSam"]["mem"]
     conda: "conda.yaml"
