@@ -135,7 +135,7 @@ rule picard_SortSam:
     log: os.path.join(output_dir, "logs/sorted_bam/picard_SortSam_{sample}.log")
     params: config["picard_SortSam"]["params"]
     resources:
-        mem: config["picard_SortSam"]["mem"]
+        mem = config["picard_SortSam"]["mem"]
     conda: "conda.yaml"
     shell:
         """
