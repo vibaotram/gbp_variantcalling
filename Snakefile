@@ -91,6 +91,7 @@ rule gbp_variantcalling:
 rule index_ref:
     input: ref
     output: multiext(ref, ".bwt", ".pac", ".ann", ".amb", ".sa") # bwt. pac, ann, amb, sa
+    log: os.path.join(output_dir, "logs/bwa_mem/index_ref.log")
     shadow: "full"
     conda: "conda.yaml"
     shell:
