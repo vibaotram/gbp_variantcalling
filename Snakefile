@@ -190,7 +190,7 @@ rule MarkDuplicates:
             picard CreateSequenceDictionary -REFERENCE {ref} -OUTPUT $ref_dict
             samtools faidx {ref}
         fi
-        gatk MarkDuplicatesSpark -R {ref} -I {input} -O {output} --spark-runner LOCAL
+        gatk MarkDuplicatesSpark -R {ref} -I {input} -O {output.bam} --spark-runner LOCAL
         """
 
 rule HaplotypeCaller:
@@ -213,7 +213,7 @@ rule HaplotypeCaller:
         then
             samtools faidx {ref} --fai-idx {ref}.fai
         fi
-        gatk HaplotypeCaller -R {ref} -I {input} -O {output} --native-pair-hmm-threads {threads} -ERC GVCF {params}
+        gatk HaplotypeCaller -R {ref} -I {input} -O {output.gvcf} --native-pair-hmm-threads {threads} -ERC GVCF {params}
         """
 
 # GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = set(sample)))
@@ -252,7 +252,7 @@ rule CombineGVCFs:
         exec > >(tee {log}) 2>&1
         input=""
         for i in {input}; do input=$input' -V '$i; done
-        gatk CombineGVCFs -R {ref} $input -O {output} {params}
+        gatk CombineGVCFs -R {ref} $input -O {output.gvcf} {params}
         """
 
 rule GenotypeGVCFs :
@@ -270,7 +270,7 @@ rule GenotypeGVCFs :
     shell:
         """
         exec > >(tee {log}) 2>&1
-        gatk  GenotypeGVCFs  -R {ref} -V {input} -O {output} {params} --intervals {wildcards.chrom}
+        gatk  GenotypeGVCFs  -R {ref} -V {input} -O {output.gvcf} {params} --intervals {wildcards.chrom}
         """
 
 
