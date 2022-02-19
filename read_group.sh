@@ -22,3 +22,4 @@ else
     sm=$(basename $(dirname $1))
     l=$(echo $header | cut -f2 -d":")
     echo "@RG\tID:$id.$l\tSM:$sm\tPL:Illumina"
+fi
