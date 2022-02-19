@@ -11,7 +11,7 @@ else
     header=$(cat $1 | head -n 1)
 fi
 
-if [[ -z $(echo $header | grep : )]];
+if [[ -z $(echo $header | grep :) ]];
 then
     id=$(echo $header | cut -f1 -d"L" | sed 's/@//')
     sm=$(basename $(dirname $1))
