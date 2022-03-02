@@ -10,5 +10,6 @@ dependencies:
     - vcftools=0.1.16
     - bcftools=1.14
     - fastqc=0.11.9
+    - multiqc=1.12
     - libgcc-ng=11.2.0
     - openjdk=8.0.312
