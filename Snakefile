@@ -57,7 +57,7 @@ container: "docker://continuumio/miniconda3:4.4.10"
 
 ## quality control before processing
 rule fastqc:
-    input: expand(os.path.join(output_dir, "fastqc/{fastq_files}_fastqc.html"), fastq_files = fastq_files)
+    input: os.path.join(output_dir, "fastqc/fastqc.html")
 
 rule fastqc_ind:
     input: expand(os.path.join(fastq_dir, "{fastq_files}"), fastq_files = fastq_files)
