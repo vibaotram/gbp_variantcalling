@@ -56,14 +56,12 @@ else:
 container: "docker://continuumio/miniconda3:4.4.10"
 
 ## quality control before processing
-rule fastqc:
-    input: os.path.join(output_dir, "fastqc/fastqc.html")
+# rule fastqc:
+#     input: os.path.join(output_dir, "fastqc/fastqc.html")
 
-rule fastqc_ind:
+rule fastqc:
     input: expand(os.path.join(fastq_dir, "{fastq_files}"), fastq_files = fastq_files)
-    output:
-        html = os.path.join(output_dir, "fastqc/fastqc.html"),
-        zip = os.path.join(output_dir, "fastqc/fastqc.zip"),
+    output: os.path.join(output_dir, "fastqc/fastqc_final.html")
     params:
         opt = config["fastqc"]["params"]
     threads: config["fastqc"]["threads"]
@@ -74,6 +72,9 @@ rule fastqc_ind:
         outdir=$(dirname {output.html})
         mkdir -p $outdir
         fastqc -o $outdir -f fastq {input}
+        multiqc -o $outdir -n fastqc $outdir/*_fastqc.zip
+        rm -rf $outdir/*_fastqc.zip
+        rm -rf $outdir/*_fastqc.html
         """
 
 
@@ -216,47 +217,65 @@ rule HaplotypeCaller:
         gatk HaplotypeCaller -R {ref} -I {input} -O {output.gvcf} --native-pair-hmm-threads {threads} -ERC GVCF {params}
         """
 
-# GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = set(sample)))
-#
-# rule GenomicsDBImport:
-#     input: expand(rules.HaplotypeCaller.output.gvcf, sample = set(sample))
-#     output: temp(directory(os.path.join(output_dir, "gendb/{chrom}")))
-#     shadow: "full"
-#     log: os.path.join(output_dir, "logs/gendb/{chrom}.log")
-#     params: config["GenomicsDBImport"]["params"]
-#     threads: config["GenomicsDBImport"]["threads"]
-#     resources:
-#         mem = config["GenomicsDBImport"]["mem"]
-#     conda: "conda.yaml"
-#     # singularity: singularity_img
-#     shell:
-#         """
-#         exec > >(tee {log}) 2>&1
-#         gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
-#         """
+GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = set(sample)))
 
-rule CombineGVCFs:
-    input: expand(rules.HaplotypeCaller.output.gvcf, sample = sample)
-    output:
-        gvcf = os.path.join(output_dir, "vcf_by_chrom/combined.g.vcf"),
-        idx = os.path.join(output_dir, "vcf_by_chrom/combined.g.vcf.idx"),
+rule GenomicsDBImport:
+    input: expand(rules.HaplotypeCaller.output.gvcf, sample = set(sample))
+    output: temp(directory(os.path.join(output_dir, "gendb/{chrom}")))
     shadow: "full"
-    log: os.path.join(output_dir, "logs/vcf_by_chrom/CombineGVCFs.log")
-    params: config["CombineGVCFs"]["params"]
+    log: os.path.join(output_dir, "logs/gendb/{chrom}.log")
+    params: config["GenomicsDBImport"]["params"]
+    threads: config["GenomicsDBImport"]["threads"]
     resources:
-        mem = config["CombineGVCFs"]["mem"]
+        mem = config["GenomicsDBImport"]["mem"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
         """
         exec > >(tee {log}) 2>&1
-        input=""
-        for i in {input}; do input=$input' -V '$i; done
-        gatk CombineGVCFs -R {ref} $input -O {output.gvcf} {params}
+        gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
         """
 
+# rule CombineGVCFs:
+#     input: expand(rules.HaplotypeCaller.output.gvcf, sample = sample)
+#     output:
+#         gvcf = os.path.join(output_dir, "vcf_by_chrom/combined.g.vcf"),
+#         idx = os.path.join(output_dir, "vcf_by_chrom/combined.g.vcf.idx"),
+#     shadow: "full"
+#     log: os.path.join(output_dir, "logs/vcf_by_chrom/CombineGVCFs.log")
+#     params: config["CombineGVCFs"]["params"]
+#     resources:
+#         mem = config["CombineGVCFs"]["mem"]
+#     conda: "conda.yaml"
+#     # singularity: singularity_img
+#     shell:
+#         """
+#         exec > >(tee {log}) 2>&1
+#         input=""
+#         for i in {input}; do input=$input' -V '$i; done
+#         gatk CombineGVCFs -R {ref} $input -O {output.gvcf} {params}
+#         """
+
+# rule GenotypeGVCFs :
+#     input: rules.CombineGVCFs.output.gvcf
+#     output:
+#         gvcf = os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf"),
+#         idx = os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf.idx"),
+#     shadow: "full"
+#     log: os.path.join(output_dir, "logs/vcf_by_chrom/GenotypeGVCFs_{chrom}.log")
+#     params: config["GenotypeGVCFs"]["params"]
+#     resources:
+#         mem = config["GenotypeGVCFs"]["mem"]
+#     conda: "conda.yaml"
+#     # singularity: singularity_img
+#     shell:
+#         """
+#         exec > >(tee {log}) 2>&1
+#         gatk GenotypeGVCFs -R {ref} -V {input} -O {output.gvcf} {params} --intervals {wildcards.chrom}
+#         """
+
 rule GenotypeGVCFs :
-    input: rules.CombineGVCFs.output.gvcf
+    input: rules.GenomicsDBImport.output
     output:
         gvcf = os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf"),
         idx = os.path.join(output_dir, "vcf_by_chrom/{chrom}.vcf.idx"),
@@ -270,10 +289,10 @@ rule GenotypeGVCFs :
     shell:
         """
         exec > >(tee {log}) 2>&1
-        gatk  GenotypeGVCFs  -R {ref} -V {input} -O {output.gvcf} {params} --intervals {wildcards.chrom}
+        cd $(dirname {input})
+        db=$(basename {input})
+        gatk GenotypeGVCFs -R {ref} -V gendb://$db -O {output.gvcf} {params} --intervals {wildcards.chrom}
         """
-
-
 
 ## variant filtration
 
@@ -399,7 +418,7 @@ rule concate_vcf:
 rule test:
     shell:
         """
-        echo "{x[1]}"
+        echo "{samples}"
         """
 # to make rule graph: snakemake gbp_variantcalling -np --rulegraph | dot -Tsvg > dag.svg
 # to make job graph: snakemake gbp_variantcalling -np --dag | dot -Tsvg > dag_job.svg
