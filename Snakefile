@@ -72,7 +72,7 @@ rule fastqc_ind:
     shell:
         """
         outdir=$(dirname {output.html})
-        mkdir $outdir
+        mkdir -p $outdir
         fastqc -o $outdir -f fastq {input}
         """
 
