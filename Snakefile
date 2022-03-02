@@ -60,10 +60,10 @@ rule fastqc:
     input: expand(os.path.join(output_dir, "fastqc/{fastq_files}_fastqc.html"), fastq_files = fastq_files)
 
 rule fastqc_ind:
-    input: os.path.join(fastq_dir, "{fastq_files}")
+    input: expand(os.path.join(fastq_dir, "{fastq_files}"), fastq_files = fastq_files)
     output:
-        html = os.path.join(output_dir, "fastqc/{fastq_files}_fastqc.html"),
-        zip = os.path.join(output_dir, "fastqc/{fastq_files}_fastqc.zip"),
+        html = os.path.join(output_dir, "fastqc/fastqc.html"),
+        zip = os.path.join(output_dir, "fastqc/fastqc.zip"),
     params:
         opt = config["fastqc"]["params"]
     threads: config["fastqc"]["threads"]
@@ -73,7 +73,7 @@ rule fastqc_ind:
         """
         outdir=$(dirname {output.html})
         mkdir $outdir
-        fastqc -o $outdir -f fastq
+        fastqc -o $outdir -f fastq {input}
         """
 
 
