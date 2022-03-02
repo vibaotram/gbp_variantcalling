@@ -69,7 +69,7 @@ rule fastqc:
     # singularity: singularity_img
     shell:
         """
-        outdir=$(dirname {output.html})
+        outdir=$(dirname {output})
         mkdir -p $outdir
         fastqc -o $outdir -f fastq {input}
         multiqc -o $outdir -n fastqc $outdir/*_fastqc.zip
