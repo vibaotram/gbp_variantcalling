@@ -236,7 +236,7 @@ rule GenomicsDBImport:
     shell:
         """
         exec > >(tee {log}) 2>&1
-        gatk --java-options "-Xmx2g -Xms2g" GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
+        gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
         """
 
 # rule CombineGVCFs:
