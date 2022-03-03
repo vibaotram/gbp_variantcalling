@@ -197,8 +197,8 @@ rule MarkDuplicates:
 rule HaplotypeCaller:
     input: rules.MarkDuplicates.output.bam
     output:
-        gvcf = temp(os.path.join(output_dir, "HaplotypeCaller/{sample}.g.vcf")),
-        idx = temp(os.path.join(output_dir, "HaplotypeCaller/{sample}.g.vcf.idx")),
+        gvcf = os.path.join(output_dir, "HaplotypeCaller/{sample}.g.vcf"),
+        idx = os.path.join(output_dir, "HaplotypeCaller/{sample}.g.vcf.idx"),
     shadow: "full"
     log: os.path.join(output_dir, "logs/HaplotypeCaller/{sample}.log")
     params: config["HaplotypeCaller"]["params"]
@@ -233,7 +233,7 @@ rule GenomicsDBImport:
     shell:
         """
         exec > >(tee {log}) 2>&1
-        gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
+        gatk --java-options "-Xmx2g -Xms2g" GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
         """
 
 # rule CombineGVCFs:
