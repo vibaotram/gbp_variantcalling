@@ -62,6 +62,7 @@ container: "docker://continuumio/miniconda3:4.4.10"
 rule fastqc:
     input: expand(os.path.join(fastq_dir, "{fastq_files}"), fastq_files = fastq_files)
     output: os.path.join(output_dir, "fastqc/fastqc_final.html")
+    log: os.path.join(output_dir, "logs/fastqc/fastqc.log")
     params:
         opt = config["fastqc"]["params"]
     threads: config["fastqc"]["threads"]
