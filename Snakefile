@@ -2,6 +2,7 @@ import os
 from Bio import SeqIO
 import re
 import glob
+import math
 
 configfile: "config.yaml"
 
@@ -16,12 +17,20 @@ fastq_files, = glob_wildcards(os.path.join(fastq_dir, "{fastq_files, .*/.*.(fq|f
 
 ref = config["ref"]
 chrom = []
-fasta_sequences = SeqIO.parse(open(ref),'fasta')
-for fasta in fasta_sequences:
-    seqname = fasta.id
-    if not re.match("Contig", seqname):
-        chrom.append(seqname)
+# fasta_sequences = SeqIO.parse(open(ref),'fasta')
+# for fasta in fasta_sequences:
+#     seqname = fasta.id
+#     if not re.match("Contig", seqname):
+#         chrom.append(seqname)
 
+records = list(SeqIO.parse(open(ref),'fasta'))
+idlist = list()
+for r in records:
+    idlist.append(r.id)
+chrom = []
+for s in idlist:
+    if not re.match("Contig", s):
+        chrom.append(s)
 ## output
 # chrom = {"Chr01", "Chr02", "Chr03", "Chr04", "Chr05", "Chr06", "Chr07", "Chr08", "Chr09", "Chr10", "Chr11"}
 
@@ -222,13 +231,39 @@ rule HaplotypeCaller:
 
 GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = set(sample)))
 
+
+
+def GenomicDBImport_intervals(wildcards):
+    chrid = wildcards.chrom
+    chridx = idlist.index(chrid)
+    size = 1e7
+    chrlen = len(records[chridx])
+    chr_itv = math.floor(chrlen/size)
+    if chrlen % size < 5e5:
+        chr_itv = chr_itv
+    else:
+        chr_itv += 1
+    GenomicDBImport_intervals = ''
+    for i in range(0, chr_itv):
+        f = int((i * size) + 1)
+        if i < chr_itv -1:
+            l = int((i + 1) * size)
+        else:
+            l = chrlen
+        s = '-L {chrid}:{f}-{l} '.format(chrid=chrid, f=f, l=l)
+        GenomicDBImport_intervals += s
+    return GenomicDBImport_intervals
+
+
+
 rule GenomicsDBImport:
     input: expand(rules.HaplotypeCaller.output.gvcf, sample = set(sample))
     output: temp(directory(os.path.join(output_dir, "gendb/{chrom}")))
     shadow: "full"
     log: os.path.join(output_dir, "logs/gendb/{chrom}.log")
-    params: config["GenomicsDBImport"]["params"]
-    threads: config["GenomicsDBImport"]["threads"]
+    params: GenomicDBImport_intervals
+        # config["GenomicsDBImport"]["params"]
+    # threads: config["GenomicsDBImport"]["threads"]
     resources:
         mem = config["GenomicsDBImport"]["mem"]
     conda: "conda.yaml"
@@ -236,7 +271,7 @@ rule GenomicsDBImport:
     shell:
         """
         exec > >(tee {log}) 2>&1
-        gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --intervals {wildcards.chrom} {params} --reader-threads {threads}
+        gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} -imr OVERLAPPING_ONLY {params}
         """
 
 # rule CombineGVCFs:
