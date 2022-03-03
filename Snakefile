@@ -70,9 +70,10 @@ rule fastqc:
     # singularity: singularity_img
     shell:
         """
+        exec > >(tee {log}) 2>&1
         outdir=$(dirname {output})
         mkdir -p $outdir
-        fastqc -o $outdir -f fastq {input}
+        fastqc -o $outdir -t {threads} -f fastq {input}
         multiqc -o $outdir -n fastqc $outdir/*_fastqc.zip
         rm -rf $outdir/*_fastqc.zip
         rm -rf $outdir/*_fastqc.html
@@ -98,6 +99,7 @@ rule index_ref:
     conda: "conda.yaml"
     shell:
         """
+        exec > >(tee {log}) 2>&1
         bwa index {ref}
         """
 
