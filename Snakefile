@@ -261,8 +261,9 @@ rule GenomicsDBImport:
     output: temp(directory(os.path.join(output_dir, "gendb/{chrom}")))
     shadow: "full"
     log: os.path.join(output_dir, "logs/gendb/{chrom}.log")
-    params: GenomicDBImport_intervals
-        # config["GenomicsDBImport"]["params"]
+    params:
+        intervals = GenomicDBImport_intervals,
+        ext_params = config["GenomicsDBImport"]["params"]
     # threads: config["GenomicsDBImport"]["threads"]
     resources:
         mem = config["GenomicsDBImport"]["mem"]
@@ -271,7 +272,7 @@ rule GenomicsDBImport:
     shell:
         """
         exec > >(tee {log}) 2>&1
-        gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} -imr OVERLAPPING_ONLY {params}
+        gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --overwrite-existing-genomicsdb-workspace -imr OVERLAPPING_ONLY {params.intervals}{params.ext_params}
         """
 
 # rule CombineGVCFs:
