@@ -84,8 +84,6 @@ rule fastqc:
         mkdir -p $outdir
         fastqc -o $outdir -t {threads} -f fastq {input}
         multiqc -o $outdir -n fastqc $outdir/*_fastqc.zip
-        rm -rf $outdir/*_fastqc.zip
-        rm -rf $outdir/*_fastqc.html
         """
 
 
