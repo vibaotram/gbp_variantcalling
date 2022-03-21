@@ -270,7 +270,12 @@ rule GenomicsDBImport:
     shell:
         """
         exec > >(tee {log}) 2>&1
-        gatk GenomicsDBImport -V {GenomicDBImport_input} --genomicsdb-workspace-path {output} --overwrite-existing-genomicsdb-workspace -imr OVERLAPPING_ONLY {params.intervals}{params.ext_params}
+        GenomicDBImport_input=''
+        for f in {input}
+        do
+            GenomicDBImport_input=GenomicDBImport_input+' -V '+f
+        done
+        gatk GenomicsDBImport -V $GenomicDBImport_input --genomicsdb-workspace-path {output} --overwrite-existing-genomicsdb-workspace -imr OVERLAPPING_ONLY {params.intervals}{params.ext_params}
         """
 
 # rule CombineGVCFs:
