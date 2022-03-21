@@ -275,7 +275,7 @@ rule GenomicsDBImport:
         do
             GenomicDBImport_input="$GenomicDBImport_input -V $f"
         done
-        gatk GenomicsDBImport -V $GenomicDBImport_input --genomicsdb-workspace-path {output} --overwrite-existing-genomicsdb-workspace -imr OVERLAPPING_ONLY {params.intervals}{params.ext_params}
+        gatk GenomicsDBImport $GenomicDBImport_input --genomicsdb-workspace-path {output} --overwrite-existing-genomicsdb-workspace -imr OVERLAPPING_ONLY {params.intervals}{params.ext_params}
         """
 
 # rule CombineGVCFs:
