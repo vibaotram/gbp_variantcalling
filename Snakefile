@@ -227,7 +227,7 @@ rule HaplotypeCaller:
         gatk HaplotypeCaller -R {ref} -I {input} -O {output.gvcf} --native-pair-hmm-threads {threads} -ERC GVCF {params}
         """
 
-GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = set(sample)))
+GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = uniq_samples))
 
 
 
