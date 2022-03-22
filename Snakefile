@@ -70,8 +70,8 @@ container: "docker://continuumio/miniconda3:4.4.10"
 
 rule fastqc_single:
     input: os.path.join(fastq_dir, "{fastq_files}")
-    output: os.path.join(output_dir, "fastqc/" + os.path.basename("{fastq_files}").rsplit(".", 2)[0] + "_fastqc.zip")
-    log: os.path.join(output_dir, "logs/fastqc/" + os.path.basename("{fastq_files}").rsplit(".", 2)[0] + ".log")
+    output: lambda wildcards: os.path.join(output_dir, "fastqc/" + os.path.basename("{fastq_files}".format(fastq_files = wildcards.fastq_files)).rsplit(".", 2)[0] + "_fastqc.zip")
+    log: lambda wildcards: os.path.join(output_dir, "logs/fastqc/" + os.path.basename("{fastq_files}".format(fastq_files = wildcards.fastq_files).rsplit(".", 2)[0] + ".log")
     params:
         opt = config["fastqc"]["params"]
     threads: config["fastqc"]["threads"]
