@@ -68,9 +68,9 @@ container: "docker://continuumio/miniconda3:4.4.10"
 # rule fastqc:
 #     input: os.path.join(output_dir, "fastqc/fastqc.html")
 
-rule fastqc:
-    input: expand(os.path.join(fastq_dir, "{fastq_files}"), fastq_files = fastq_files)
-    output: os.path.join(output_dir, "fastqc/fastqc_final.html")
+rule fastqc_single:
+    input: os.path.join(fastq_dir, "{fastq_files}")
+    output: os.path.join(output_dir, "{fastq_files}".rsplit(".", 2)[0] + "_fastqc.zip")
     log: os.path.join(output_dir, "logs/fastqc/fastqc.log")
     params:
         opt = config["fastqc"]["params"]
@@ -83,6 +83,20 @@ rule fastqc:
         outdir=$(dirname {output})
         mkdir -p $outdir
         fastqc -o $outdir -t {threads} -f fastq {input}
+        """
+
+rule fastqc:
+    input: expand(rules.fastqc_single.output, fastq_files = fastq_files)
+    output: os.path.join(output_dir, "fastqc/fastqc_final.html")
+    log: os.path.join(output_dir, "logs/fastqc/fastqc.log")
+    params:
+        opt = config["fastqc"]["params"]
+    threads: config["fastqc"]["threads"]
+    conda: "conda.yaml"
+    # singularity: singularity_img
+    shell:
+        """
+        exec > >(tee {log}) 2>&1
         multiqc -o $outdir -n fastqc $outdir/*_fastqc.zip
         """
 
