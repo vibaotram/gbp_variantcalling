@@ -68,10 +68,17 @@ container: "docker://continuumio/miniconda3:4.4.10"
 # rule fastqc:
 #     input: os.path.join(output_dir, "fastqc/fastqc.html")
 
+<<<<<<< HEAD
 rule fastqc_single:
     input: os.path.join(fastq_dir, "{fastq_files}")
     output: lambda wildcards: os.path.join(output_dir, "fastqc/" + os.path.basename("{fastq_files}".format(fastq_files = wildcards.fastq_files)).rsplit(".", 2)[0] + "_fastqc.zip")
     log: lambda wildcards: os.path.join(output_dir, "logs/fastqc/" + os.path.basename("{fastq_files}".format(fastq_files = wildcards.fastq_files)).rsplit(".", 2)[0] + ".log")
+=======
+rule fastqc:
+    input: expand(os.path.join(fastq_dir, "{fastq_files}"), fastq_files = fastq_files)
+    output: os.path.join(output_dir, "fastqc/fastqc_final.html")
+    log: os.path.join(output_dir, "logs/fastqc/fastqc.log")
+>>>>>>> parent of cc55a5e... split fastqc
     params:
         opt = config["fastqc"]["params"]
     threads: config["fastqc"]["threads"]
@@ -83,6 +90,7 @@ rule fastqc_single:
         outdir=$(dirname {output})
         mkdir -p $outdir
         fastqc -o $outdir -t {threads} -f fastq {input}
+<<<<<<< HEAD
         """
 
 rule fastqc:
@@ -94,6 +102,8 @@ rule fastqc:
     shell:
         """
         exec > >(tee {log}) 2>&1
+=======
+>>>>>>> parent of cc55a5e... split fastqc
         multiqc -o $outdir -n fastqc $outdir/*_fastqc.zip
         """
 
