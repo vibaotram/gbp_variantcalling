@@ -71,7 +71,7 @@ container: "docker://continuumio/miniconda3:4.4.10"
 rule fastqc_single:
     input: os.path.join(fastq_dir, "{fastq_files}")
     output: os.path.join(output_dir, "{fastq_files}".rsplit(".", 2)[0] + "_fastqc.zip")
-    log: os.path.join(output_dir, "logs/fastqc/fastqc.log")
+    log: os.path.join(output_dir, "logs/fastqc/" + "{fastq_files}".rsplit(".", 2)[0] + ".log")
     params:
         opt = config["fastqc"]["params"]
     threads: config["fastqc"]["threads"]
@@ -89,9 +89,6 @@ rule fastqc:
     input: expand(rules.fastqc_single.output, fastq_files = fastq_files)
     output: os.path.join(output_dir, "fastqc/fastqc_final.html")
     log: os.path.join(output_dir, "logs/fastqc/fastqc.log")
-    params:
-        opt = config["fastqc"]["params"]
-    threads: config["fastqc"]["threads"]
     conda: "conda.yaml"
     # singularity: singularity_img
     shell:
