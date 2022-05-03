@@ -333,7 +333,8 @@ rule GenotypeGVCFs :
         exec > >(tee {log}) 2>&1
         cd $(dirname {input})
         db=$(basename {input})
-        gatk GenotypeGVCFs -R {ref} -V gendb://$db -O {output.gvcf} {params} --intervals {wildcards.chrom}
+        mkdir $(dirname {output.gvcf})
+        gatk GenotypeGVCFs -R {ref} -V gendb://$db -O {output.gvcf} {params}
         """
 
 ## variant filtration
