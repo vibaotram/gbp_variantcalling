@@ -333,7 +333,7 @@ rule GenotypeGVCFs :
         exec > >(tee {log}) 2>&1
         cd $(dirname {input})
         db=$(basename {input})
-        mkdir $(dirname {output.gvcf})
+        mkdir -p $(dirname {output.gvcf})
         gatk GenotypeGVCFs -R {ref} -V gendb://$db -O {output.gvcf} {params}
         """
 
