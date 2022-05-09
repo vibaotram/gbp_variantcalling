@@ -414,7 +414,7 @@ rule filter_variants:
         if [[ $(cat "{wildcards.chrom}.singletons" | wc -l ) != 1 ]]
         then
             echo "### filtering by vcftools: singletons and doubletons"
-            vcftools --vcf $in_name"{params.vcftools_suf}.vcf" --out $in_name"{params.vcftools_suf}_singletons" --positions "{wildcards.chrom}.singletons" --recode --recode-INFO-all
+            vcftools --vcf $in_name"{params.vcftools_suf}.vcf" --out $in_name"{params.vcftools_suf}_singletons" --exclude-positions "{wildcards.chrom}.singletons" --recode --recode-INFO-all
             mv $in_name"{params.vcftools_suf}_singletons.recode.vcf" $in_name"{params.vcftools_suf}_singletons.vcf"
             sgl_count=$(echo $(gatk CountVariants -V $in_name"{params.vcftools_suf}_singletons.vcf") | sed 's/Tool returned://g')
         else
