@@ -108,6 +108,20 @@ rule index_ref:
         """
         exec > >(tee {log}) 2>&1
         bwa index {ref}
+
+        ref_name=$(basename -s .fasta {ref})
+        ref_dict="$(dirname {ref})/$ref_name.dict"
+        ref_fai="{ref}.fai"
+        if [[ ! -f $ref_dict || ! -f $ref_fai ]]
+        then
+            picard CreateSequenceDictionary -REFERENCE {ref} -OUTPUT $ref_dict
+            samtools faidx {ref}
+        fi
+
+        if [[ ! -f {ref}.fai ]]
+        then
+            samtools faidx {ref} --fai-idx {ref}.fai
+        fi
         """
 
 def input_bwa_mem(wildcards):
@@ -220,18 +234,14 @@ rule HaplotypeCaller:
     shell:
         """
         exec > >(tee {log}) 2>&1
-        if [[ ! -f {ref}.fai ]]
-        then
-            samtools faidx {ref} --fai-idx {ref}.fai
-        fi
         gatk HaplotypeCaller -R {ref} -I {input} -O {output.gvcf} --native-pair-hmm-threads {threads} -ERC GVCF {params}
         """
 
-GenomicDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = uniq_samples))
+GenomicsDBImport_input = ' -V '.join(expand(rules.HaplotypeCaller.output, sample = uniq_samples))
 
 
 
-def GenomicDBImport_intervals(wildcards):
+def GenomicsDBImport_intervals(wildcards):
     chrid = wildcards.chrom
     chridx = idlist.index(chrid)
     size = 1e7
@@ -241,7 +251,7 @@ def GenomicDBImport_intervals(wildcards):
         chr_itv = chr_itv
     else:
         chr_itv += 1
-    GenomicDBImport_intervals = ''
+    GenomicsDBImport_intervals = ''
     for i in range(0, chr_itv):
         f = int((i * size) + 1)
         if i < chr_itv -1:
@@ -249,8 +259,8 @@ def GenomicDBImport_intervals(wildcards):
         else:
             l = chrlen
         s = '-L {chrid}:{f}-{l} '.format(chrid=chrid, f=f, l=l)
-        GenomicDBImport_intervals += s
-    return GenomicDBImport_intervals
+        GenomicsDBImport_intervals += s
+    return GenomicsDBImport_intervals
 
 
 
@@ -260,7 +270,7 @@ rule GenomicsDBImport:
     shadow: "full"
     log: os.path.join(output_dir, "logs/gendb/{chrom}.log")
     params:
-        intervals = GenomicDBImport_intervals,
+        intervals = GenomicsDBImport_intervals,
         ext_params = config["GenomicsDBImport"]["params"]
     # threads: config["GenomicsDBImport"]["threads"]
     resources:
@@ -270,12 +280,12 @@ rule GenomicsDBImport:
     shell:
         """
         exec > >(tee {log}) 2>&1
-        GenomicDBImport_input=''
+        GenomicsDBImport_input=''
         for f in {input}
         do
-            GenomicDBImport_input="$GenomicDBImport_input -V $f"
+            GenomicsDBImport_input="$GenomicsDBImport_input -V $f"
         done
-        gatk GenomicsDBImport -V $GenomicDBImport_input --genomicsdb-workspace-path {output} --overwrite-existing-genomicsdb-workspace -imr OVERLAPPING_ONLY {params.intervals}{params.ext_params}
+        gatk GenomicsDBImport $GenomicsDBImport_input --genomicsdb-workspace-path {output} --overwrite-existing-genomicsdb-workspace -imr OVERLAPPING_ONLY {params.intervals}{params.ext_params}
         """
 
 # rule CombineGVCFs:
